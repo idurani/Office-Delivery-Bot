@@ -36,45 +36,57 @@ int main(void)
 }
 
 
-
+// function to have the cybot move forward
 void move_forward(oi_t *sensor, int centimeters){
     int sum = 0;
+
+    oi_update(sensor);
+    //set wheels to move forward
     oi_setWheels(rightWheelSpeed,leftWheelSpeed);
+
+    //while loop while it reaches past given centimeters
     while(sum < centimeters*10){
 
-
-        oi_update(sensor);
         sum += sensor->distance;
+        oi_update(sensor);
     }
+
+    // stop Cybot
     oi_setWheels(0,0);
 }
 
 void turn(oi_t *sensor, int degrees){
+    oi_update(sensor); //set angle to zero
 
+    //turns clockwise if angle is less than zero
     if(degrees<0){
+
+        //right wheel goes back and left wheel goes forward
         oi_setWheels(-rightWheelSpeed,leftWheelSpeed); // turning clockwise
-        oi_update(sensor);
         int sum = 0;
+        //while sum is a higher value than the degree given
         while(sum>degrees){
             sum += sensor->angle;
-            oi_update(sensor);
+            oi_update(sensor); // set angle to zero
         }
     }
+    // turns counterclockwise if  degree is positive
     else{
+        //right wheel moves forward and left wheel moves backward make it rotate couter clockwise
         oi_setWheels(rightWheelSpeed,-leftWheelSpeed); // turning counterclockwise
-        oi_update(sensor);
         int sum = 0;
+        // keeps updating time until the sum is greater than the degree given
         while(sum<degrees){
             sum += sensor->angle;
-            oi_update(sensor);
+            oi_update(sensor); // set angle to zero
         }
     }
 
-    oi_setWheels(0,0);
+    oi_setWheels(0,0);//stops the cybot
 }
 
 
-
+//Function to have the Cybot move backward
 void move_backward(oi_t *sensor, int centimeter){
     int sum = 0;
     oi_setWheels(-rightWheelSpeed,-leftWheelSpeed);
@@ -93,6 +105,17 @@ void turn_left(oi *sensor){
 
 void turn_right(oi *sensor){
     turn(senosr, -90);
+}
+
+void spin(oi *sensor){
+
+    int angle=0;
+    oi_update(sensor);
+    oi_setWheels(rightWheelSpeed, -leftWheelSpeed);
+    while(angle<180){
+        sum+= sensor->angle;
+        oi_update(sensor);
+    }
 }
 
 
