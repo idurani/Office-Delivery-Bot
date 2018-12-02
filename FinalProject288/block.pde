@@ -1,7 +1,7 @@
 class block{
   
   float x, y;
-  float type;
+  int type;
   int w;
   
   public block(float x, float y, int type){
@@ -38,7 +38,7 @@ class block{
     float bumperSize = 6.5;
     if(type == 1 || type == 2){
       fill(255);
-      arc((width/2) + (x*6), (height/2) - (y*6), bumperSize, bumperSize, PI, TWO_PI);
+      arc((width/2) + (x*6), (height/2) - (y*6), bumperSize*6, bumperSize*6, PI, TWO_PI);
     }
     else if(type == 3 || type == 4 || type == 5){
       fill(0);
@@ -80,7 +80,7 @@ class block{
       theta = TWO_PI + atan(y/x);
     }
     
-    theta = theta + (10*(PI/180));
+    theta = theta + (deg*(PI/180));
     x = r*cos(theta);
     y = r*sin(theta);
   }
@@ -101,7 +101,7 @@ class block{
       theta = TWO_PI + atan(y/x);
     }
     
-    theta = theta - (10*(PI/180));
+    theta = theta - (deg*(PI/180));
     x = r*cos(theta);
     y = r*sin(theta);
   }
@@ -116,6 +116,10 @@ class block{
   
   float getY(){
     return y;
+  }
+  
+  int getType(){
+    return type;
   }
   
 }

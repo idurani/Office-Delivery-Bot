@@ -26,7 +26,7 @@ void setup(){
   clearSerialData();
   blockList = new ArrayList();
   shapeMode(CENTER);
-  textMode(CENTER);
+  rectMode(CENTER);
 }
 
 /**
@@ -40,18 +40,26 @@ void setup(){
 * e turn right 45 degrees
 * r turn 180 degrees
 * m play music
+* p delete objects in order of first added
+* l delete scanned objects in front in order of first added
 */ 
 void draw(){
   background(#044f6f);
+  line((width/2) - (30*6), (height/2) - (30*6), (width/2) + (30*6), (height/2) + (30*6));
+  line((width/2) + (30*6), (height/2) - (30*6), (width/2) - (30*6), (height/2) + (30*6));
   fill(255);
-  ellipse(width/2, height/2, 16*6, 16*6);
+  ellipse(width/2, height/2, 18*6, 18*6);
+  noFill();
+  ellipse(width/2, height/2, 60*6, 60*6);
+  rect(width/2, height/2, 61*6, 61*6);
   fill(100);
-  arc(width/2, height/2, 16*6, 16*6, PI, TWO_PI);
+  arc(width/2, height/2, 17*6, 17*6, PI, TWO_PI);
   drawBlocks();
   
   //send data to the bot when a key is pressed
-  delay(200);
+  
   if(keyPressed){
+    
     currentKey = key;
     myClient.write(key);
     if(key == 'a'){
@@ -72,15 +80,18 @@ void draw(){
     if(key == 'r'){
       rotateBlocksLeft(180);
     }
-    
+    if(key == 'f'){
+     // deleteFrontBlocks();
+    }
+    if(key == 'p'){
+      deleteAllBlocks();
+    }
+    if(key == 'l'){
+      deleteFrontBlocks();
+    }
+    delay(200);
   }
-  
-  //delete objects that are clicked on
-  if(mousePressed){
-    
-  }
-  
-  
+   
   
   //read and proccess incoming data
   if(myClient.available() > 1){
@@ -93,9 +104,9 @@ void draw(){
     //print incoming string
     println(string);
     //print serialData
-    for(int i = 0; i < serialData.length; i++){
-      println(serialData[i]);
-    }
+    //for(int i = 0; i < serialData.length; i++){
+    //  println(serialData[i]);
+    //}
     println();
     
     //something was hit, don't move the blocks
@@ -109,7 +120,8 @@ void draw(){
   }
   
   if(currentKey == 'f'){
-    text("SCANNING", width/2, (height/2) + 150);
+    fill(255);
+    text("SCANNING", 5, (height -20));
   }
   
 }
@@ -208,7 +220,7 @@ void creatBlocks(){
     blockList.add(new block(-x, y, type));
   }
   else if(type == 2){
-    blockList.add(new block(x, y, type));
+    blockList.add(new block(-x, y, type));
   }
   else if(type == 3){
     blockList.add(new block(0, y, type));
@@ -257,5 +269,21 @@ void rotateBlocksLeft(int deg){
 void moveBlocks(int d){
   for(int i = 0; i < blockList.size(); i++){
     blockList.get(i).move(d);
+  }
+}
+
+void deleteFrontBlocks(){
+  for(int i = 0; i < blockList.size(); i++){
+    if(blockList.get(i).getType() == 9 || blockList.get(i).getType() == 10){
+      if(blockList.get(i).getY() > 0){
+        blockList.remove(i);
+      }
+    }
+  }
+}
+
+void deleteAllBlocks(){
+  if(blockList.size() > 0){
+    blockList.remove(0);
   }
 }
