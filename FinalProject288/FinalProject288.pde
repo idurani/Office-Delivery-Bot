@@ -19,7 +19,7 @@ ArrayList<block> blockList;
 char currentKey = 0;
 void setup(){
 
-  size(800, 800);
+  size(1800, 1000);
   background(#044f6f);
   myClient = new Client(this, "192.168.1.1", 288);
   serialData = new int[20];
@@ -52,6 +52,7 @@ void draw(){
   noFill();
   ellipse(width/2, height/2, 60*6, 60*6);
   rect(width/2, height/2, 61*6, 61*6);
+  rect(width/2, height/2, 100*6, 100*6);
   fill(100);
   arc(width/2, height/2, 17*6, 17*6, PI, TWO_PI);
   drawBlocks();
@@ -168,7 +169,7 @@ void clearSerialData(){
 */
 void drawBlocks(){
   //check to see if the blocks are out of the screen
-  blockOutOfScreen();
+//  blockOutOfScreen();
   //draw the blocks
   for(int i = 0; i < blockList.size(); i++){
     blockList.get(i).drawUI();
@@ -275,8 +276,11 @@ void moveBlocks(int d){
 void deleteFrontBlocks(){
   for(int i = 0; i < blockList.size(); i++){
     if(blockList.get(i).getType() == 9 || blockList.get(i).getType() == 10){
-      if(blockList.get(i).getY() > 0){
-        blockList.remove(i);
+      if(blockList.get(i).getY() > 0 && blockList.get(i).getY() < 60){
+        if(abs(blockList.get(i).getX()) < 60)
+          {
+            blockList.remove(i);
+          }
       }
     }
   }
