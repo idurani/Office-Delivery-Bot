@@ -196,3 +196,86 @@ void move_servo(float deg)
 	TIMER1_TBMATCHR_R = posChange;
 	TIMER1_TBPMR_R = posChange >> 16;
 }
+
+/**
+ *
+ */
+void sweep_servo(volatile float (*sweepDataPtr)[2][91]){
+	//sweep the servo across 180 degrees, 2 degrees at a time
+	int i;
+	for(i = 0; i < 91; i += 1){
+		//move by two degrees
+		move_servo(i*2);
+		//give the servo time to move
+		timer_waitMillis(30);
+		//read ir data
+		read_ir();
+		//save data into the next section of the array
+		(*sweepDataPtr)[0][i] = get_dis_ir();
+		(*sweepDataPtr)[1][i] = read_ping();
+		//sprintf(str, "%d\t%.1f\t\t%.1f\n\r", i*2, sweepDataPtr[0][i], sweepDataPtr[1][i] );
+		//uart_sendStr(str);
+	}
+}
+
+/**
+ *
+ */
+void read_turret(volatile float (*sweepDataPtr)[2][91],volatile  struct block (*finds)[6],volatile  int *objectCount){
+	//record data
+	sweep_servo(sweepDataPtr);
+	//variables for iterating through data to find blocks and info about blocks
+	*objectCount = 0;
+	int i;
+	int looking = 0;
+	int currentWidth = 0;
+	float minDist = 100;
+
+	//start iterating through data gathered
+	for(i = 0; i < 90; i++)
+	{
+		//if it finds an object, set the boolean variable indicating an object found to 1
+		if((*sweepDataPtr)[0][i] < 100 && (*sweepDataPtr)[1][i] < 50 && looking == 0
+				&& (*sweepDataPtr)[0][i+1] < 100 && (*sweepDataPtr)[1][i+1])
+		{
+			looking = 1;
+		}
+		//if the end of an object is found
+		if(((*sweepDataPtr)[0][i] >= 100 || (*sweepDataPtr)[1][i] >= 50) && looking == 1)
+		{
+			//set boolean variable indicating an object found to 0
+			looking = 0;
+			//record distance
+			(*finds)[*objectCount].distance = minDist;
+			//compute center of object
+			(*finds)[*objectCount].center = i*2-currentWidth;
+			//compute width of object using arc length formula
+			(*finds)[*objectCount].width = currentWidth * (6.28 / 180) * minDist;
+			//compute x coordinate of object
+			(*finds)[*objectCount].x = ((*finds)[*objectCount].distance + ((*finds)[*objectCount].width / 2)) * cos((*finds)[*objectCount].center * 3.14 / 180);
+			//compute y coordinate of object
+			(*finds)[*objectCount].y = ((*finds)[*objectCount].distance + ((*finds)[*objectCount].width / 2)) * sin((*finds)[*objectCount].center * 3.14 / 180);
+			//iterate to the next block in the block array
+			*objectCount = *objectCount + 1;
+			//reset helper variables
+			currentWidth = 0;
+			minDist = 100;
+		}
+		//if currently looking at a block
+		if(looking == 1)
+		{
+			//increase the width helper variable
+			currentWidth++;
+			//make sure the minimum distance of the object is still the minimum distance
+			if((*sweepDataPtr)[1][i] < minDist)
+			{
+				minDist = (*sweepDataPtr)[1][i];
+			}
+		}
+		//if the block array is full
+		if(*objectCount == 6)
+		{
+			break;
+		}
+	}
+}
