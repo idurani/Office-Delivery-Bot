@@ -8,12 +8,18 @@
 #include "uart.h"
 #include "inits_tiva.h"
 
-
+//Function to make the cybot move a given centimeters
 void move_forward(oi_t *sensor, int centimeters);
+//Fuction to make the cybot turn given degrees (degrees<0=right degrees>0=left)
 void turn(oi_t *sensor, int degrees);
+//Function to make the cybot move back a given amount of centimeters
 void move_backward(oi_t *sensor, int centimeters);
+//Function used when the move cybot backward when it bumps, edge, or cliff
+//in millimeter to be more accurate when moving back
 void bumper_backward(oi_t *sensor, int millimeters);
+//Function to have bot scan around it to identify small or large objects to notify the GUI
 void scan();
+//Load in a song to the bit 
 void loadMary();
 
 
@@ -168,35 +174,35 @@ void move_forward(oi_t *sensor, int centimeters){
             hitObject=1;
             break;
         }
-        else if(sensor->cliffFrontRight || sensor->cliffFrontLeft){
+        else if(sensor->cliffFrontRight || sensor->cliffFrontLeft){ //Responsive if the front cliff sensor are notified there is a cliff
             bumper_backward(sensor, sum);
             sprintf(str,"3,%d,e", sum);
             uart_sendStr(str);
             hitObject=1;
             break;
         }
-        else if((sensor->cliffFrontRightSignal > 2700) || (sensor->cliffFrontLeftSignal > 2700)){
+        else if((sensor->cliffFrontRightSignal > 2700) || (sensor->cliffFrontLeftSignal > 2700)){ //Responsive if the front cliff signals are read as white color 
             bumper_backward(sensor, sum);
             sprintf(str,"6,%d,e", sum);
             uart_sendStr(str);
             hitObject=1;
             break;
         }
-        else if(sensor->cliffLeft){
+        else if(sensor->cliffLeft){ //responsive if left side of the bot sees a cliff
             bumper_backward(sensor, sum);
             sprintf(str,"5,%d,e", sum);
             uart_sendStr(str);
             hitObject=1;
             break;
         }
-        else if(sensor->cliffLeftSignal > 2700){
+        else if(sensor->cliffLeftSignal > 2700){ //responsive if left side of the bot sees a white edge 
             bumper_backward(sensor, sum);
             sprintf(str,"8,%d,e", sum);
             uart_sendStr(str);
             hitObject=1;
             break;
         }
-        else if(sensor->cliffRight){
+        else if(sensor->cliffRight){ //responsive if right side of the bot sees a cliff
             bumper_backward(sensor, sum);
             sprintf(str,"4,%d,e", sum);
             uart_sendStr(str);
@@ -204,7 +210,7 @@ void move_forward(oi_t *sensor, int centimeters){
 
             break;
         }
-        else if(sensor->cliffRightSignal > 2700){
+        else if(sensor->cliffRightSignal > 2700){ //responsive if right side if the bot sees a white edge
             bumper_backward(sensor, sum);
             sprintf(str,"7,%d,e", sum);
             uart_sendStr(str);
@@ -213,7 +219,7 @@ void move_forward(oi_t *sensor, int centimeters){
         }
 
     }
-
+    //if hitObject equals zero non of the condition above happen and it sends it to the GUI
     if(hitObject==0){
         sprintf(str, "-1,%d,e", sum);
         uart_sendStr(str);
@@ -298,7 +304,9 @@ void turn(oi_t *sensor, int degrees){
 void move_backward(oi_t *sensor, int centimeters){
     int sum = 0;
     oi_update(sensor);
+    //set wheels moving back
     oi_setWheels(-rightWheelSpeed,-leftWheelSpeed);
+    //move back while distance traveled is less than given centimeters 
     while(sum < centimeters*10){
 
         oi_update(sensor);
@@ -359,13 +367,20 @@ void bumper_backward(oi_t *sensor, int millimeters){
 
 void scan()
 {
+    //start off with zero objects
     objectCount = 0;
+    //read the data and finds object width, angle, and distance from the cybot 
     read_turret(&sweepData, &finds, &objectCount);
+    //Strings to sent to the cybot 
     char str[100];
     char temp[20];
     sprintf(str, "9,%d", objectCount);
     int LorS;
     int i;
+    /*
+      This for goes through all the objects and indentifys if it is
+      a small or large object 
+    */
     for(i = 0; i < objectCount; i++)
     {
         if(finds[i].width < 7)
@@ -380,10 +395,12 @@ void scan()
         strcat(str, temp);
     }
     strcat(str, ",e");
+    //sends object data to the GUI
     uart_sendStr(str);
     move_servo(0);
 }
 
+//Load in a song 
 void loadMary(){
     unsigned char notes[] = {64, 62, 60, 62, 64, 64, 64};
     unsigned char duration[] = {32, 32, 32, 32, 32, 32, 32};
