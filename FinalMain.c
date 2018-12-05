@@ -5,7 +5,7 @@
 #include "math.h"
 #include "move.h"
 
-#define tpd 153
+#define tpd 153 
 #define zeroPos 7500
 #define power -1.086
 #define coe 65430
@@ -27,6 +27,7 @@ int x,y;
 int main(void)
 {
 	int i;
+	//make every value in finds to start off as zero 
 	for(i = 0; i < 6; i++)
 	{
 		finds[i].width = 0;
@@ -47,15 +48,23 @@ int main(void)
 
 	while(1)
 	{
+		
 		objectCount = 0;
+		//have the cybot scan and store data
 		move_servo(0);
 		timer_waitMillis(300);
+		//you the data found in the sensor to indentify objects
 		read_turret(&sweepData, &finds, &objectCount);
+		//Strings for what we send to the GUI
 		char str[100];
 		char temp[20];
 		sprintf(str, "9,%d", objectCount);
 		int LorS;
 		int i;
+		/*
+		This for loop goes through all teh object found and 
+		indentfy the if it is a small or large objects
+		*/
 		for(i = 0; i < objectCount; i++)
 		{
 			if(finds[i].width < 10)
