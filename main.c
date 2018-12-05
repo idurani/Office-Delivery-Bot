@@ -1,3 +1,9 @@
+/**
+ * 		@file main.c
+ * 		@brief This file contains the movement functions and the main function for the robot
+ * 		@author Jared Rickard, Taylor BurtonIsmael Duran, Giovanni Mejia
+ * 		@date 12/05/2018
+ */
 #include "open_interface.h"
 #include "math.h"
 #include <stdio.h>
@@ -8,56 +14,28 @@
 #include "uart.h"
 #include "inits_tiva.h"
 
-
-
-#define tpd 153
-#define zeroPos 7500
-#define power -1.086
-#define coe 65430
-
-
+///Function to make the cybot move a given centimeters
 void move_forward(oi_t *sensor, int centimeters);
+///Fuction to make the cybot turn given degrees (degrees<0=right degrees>0=left)
 void turn(oi_t *sensor, int degrees);
-void move_backward(oi_t *sensor, int centimeter);
-void turn_left(oi_t *sensor);
-void turn_right(oi_t *sensor);
-void spin(oi_t *sensor);
+///Function to make the cybot move back a given amount of centimeters
+void move_backward(oi_t *sensor, int centimeters);
+///Function used when the move cybot backward when it bumps, edge, or cliff
+///in millimeter to be more accurate when moving back
 void bumper_backward(oi_t *sensor, int millimeters);
-void read_turret();
-void sweep_servo();
-void sweep_servo();
-void read_turret();
-void sendPulse();
-float read_ping();
-void read_ir();
-int get_ir_raw();
-float get_dis_ir();
-void move_servo(float deg);
-void sendSweepData();
-int checkClearPath(float yMax);
-int turretAvoid(oi_t *sensor, int cm);
-void clearObjects();
+///Function to have bot scan around it to identify small or large objects to notify the GUI
+void scan();
+///Load in a song to the bit
+void loadMary();
 
-int leftWheelSpeed = 250;
-int rightWheelSpeed = 250;
+///calibrated left wheel speed
+int leftWheelSpeed = 150;
+///calibrated right wheel speed
+int rightWheelSpeed = 150;
+///cartesian coordinates, legacy
+int x, y;
 
-/**
- * width is the width of the object
- * center is the degree messurement
- * distance is the distance form the roomba
- */
-struct block
-{
-    float width;
-    int center;
-    float distance;
-
-};
-
-volatile struct block finds[6];
-volatile int objectCount = 0;
-volatile float sweepData[2][91];
-
+///the enumeration of relative directions
 typedef enum{
     Forward,
     Backward,
@@ -65,9 +43,10 @@ typedef enum{
     Right
 } direction;
 
-
+///current direction of the robot
  direction dir = Forward;
 
+ ///enumeration of the possible states that the robot can be in
 typedef enum{
     leftEdge,
     rightEdge,
@@ -79,178 +58,277 @@ typedef enum{
     objectRight,
 }state;
 
-state s = forward;
+///string to be sent over UART to the GUI
+char str[50];
 
-int x, y;
-
-
-
-
-int main(void)
-{
-   oi_t *sensor = oi_alloc();
-   oi_init(sensor);
-
-   ping_init();
-   adc_init();
-   PWM_init();
-   uart_init();
-   lcd_init();
-
-   int avoided;
-   while(1){
+///data array from sweep
+volatile float sweepData[2][91];
+///array of objects found during sweep
+volatile struct block finds[6];
+///number of objects found during sweep
+volatile int objectCount = 0;
 
 
-       //scan
-       // case for object in front
-       // case for goal object
-       if(s == forward){
-           avoided = turretAvoid(sensor, 30);
-           lcd_printf("%d", avoided);
+ void main(void){
+	///initialize the UART
+    uart_init();
+    ///initialize the LCD
+    lcd_init();
+    ///initialize the ping sensor
+    ping_init();
+    ///initialize the IR sensor
+    adc_init();
+    ///initialize the PWM signal for the sensor turret servo
+    PWM_init();
+    ///set the sensor turret to 0 degrees for a quicker response
+    move_servo(0);
+    ///wait for the sensor turret to get into position
+    timer_waitMillis(300);
+    ///allocate space for the OI data
+    oi_t *sensor = oi_alloc();
+    ///initialize the OI
+    oi_init(sensor);
+    ///play
+    loadMary();
+
+    char command;
+    move_forward(sensor,10);
+    while(1){
+       lcd_printf("waiting");
+       timer_waitMillis(10);
+       command = uart_receive();
+       lcd_printf("%c", command);
+       if(command == 'w'){
+           //adjust for bot 7, move 30cm
+           move_forward(sensor, 28);
        }
-       else if(s == frontEdge){
-           s = forward;
-           turn_right(sensor);
+       if( command == 'd'){
+           //turn 10 adjusted for bot 7
+           turn(sensor, -1);
        }
-       else if(s == rightEdge){
-           s = forward;
-           turn(sensor, 20);
+       if( command == 's'){
+           //adjusted for bot 7, move 10cm
+           move_backward(sensor, 8);
        }
-       else if(s == leftEdge){
-           s = forward;
-           turn(sensor, -20);
+       if(command == 'a'){
+           //turn 10 adjusted for bot 7
+           turn(sensor, 1);
        }
-       else if(s == rightBump){
-           s = forward;
-           turn_right(sensor);
-           avoided = turretAvoid(sensor, 40);
-           if(avoided == 0){
-               turn_left(sensor);
-           }
+       if(command == 'f'){
+           scan();
        }
-       else if(s == leftBump){
-           s = forward;
-           turn_right(sensor);
-           avoided = turretAvoid(sensor, 15);
-           if(avoided == 0){
-               turn_left(sensor);
-           }
+       if(command == 'q'){
+           //turn 45 adjusted for bot 7
+           turn(sensor, 36);
        }
-       else{
-           lcd_printf("we are stuck");
+       if(command == 'e'){
+           //turn 45, adjusted for bot 7
+           turn(sensor, -37);
+       }
+       if(command == 'r'){
+           //turn 180, adjusted for bot 7
+           turn(sensor, 173);
+       }
+       if(command == 'm'){
+           //play mary had a little lamb
+           oi_play_song(1);
        }
 
 
-   }
 
+    }
 }
 
 
 
-// function to have the cybot move forward
+
+
+
+// data example: 1,2,3,-15e
+/*
+ * dataType:
+ * bumpLeft 1
+ * bumpRight 2
+ * cliffFront 3
+ * cliffRight 4
+ * cliffLeft 5
+ * edgeFront 6
+ * edgeRight 7
+ * edgeLeft 8
+ * scannedData 9
+ * (datatype),data,data,data(followed by the char e)
+ */
+
+/**
+ * move the robot forward by a specified distance
+ * @param sensor 		connection to the OI sensors and motors
+ * @param centimeters 	distance to move forward measured in centimeters
+ * @author
+ * @date 12/05/2018
+ */
 void move_forward(oi_t *sensor, int centimeters){
+	///the distance traversed so far
     int sum = 0;
-
+    ///update the OI data
     oi_update(sensor);
-    //set wheels to move forward
+    ///set wheels to move forward
     oi_setWheels(rightWheelSpeed,leftWheelSpeed);
-
-    //while loop while it reaches past given centimeters
+    ///boolean to determine if an object was hit or not
+    int hitObject = 0;
+    ///while loop while it reaches past given centimeters
     while(sum < centimeters*10){
-
+    	///update the OI data
         oi_update(sensor);
+        ///update the distance traversed
         sum += sensor->distance;
-
-        if (sensor->bumpLeft) { // Responsive if the left bumper is being pressed
+        ///if the left bumper is pressed
+        if (sensor->bumpLeft) {
+        	///back up the robot
             bumper_backward(sensor, sum);
-            s = leftBump;
-            break;
-
-        }
-        else if(sensor->bumpRight){ // Responsive if the right bumper is being pressed
-            bumper_backward(sensor, sum);
-            s = rightBump;
-            break;
-        }
-        else if(sensor->cliffFrontRight || sensor->cliffFrontLeft || (sensor->cliffFrontRightSignal > 2700) || (sensor->cliffFrontLeftSignal > 2700)){
-            bumper_backward(sensor, sum);
-            s = frontEdge;
+            ///inform the GUI that an object was found in front of the left bump sensor
+            sprintf(str,"1,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
             break;
         }
-        else if(sensor->cliffLeft || (sensor->cliffLeftSignal > 2700)){
+        ///if the right bumper is pressed
+        else if(sensor->bumpRight){
+        	///back up the robot
             bumper_backward(sensor, sum);
-            s = leftEdge;
+            ///inform the GUI that an object was found in front of the right bump sensor
+            sprintf(str,"2,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
             break;
         }
-        else if(sensor->cliffRight || (sensor->cliffRightSignal > 2700)){
+        ///if the robot detects a cliff
+        else if(sensor->cliffFrontRight || sensor->cliffFrontLeft){
+        	///back up the robot
             bumper_backward(sensor, sum);
-            s = rightEdge;
+            ///inform the GUI that a cliff was found in front of the robot
+            sprintf(str,"3,%d,e", sum);
+            uart_sendStr(str);
+            //set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
             break;
         }
-
-
- }
-
-    // stop Cybot
-    oi_setWheels(0,0);
-
-
-    switch(dir){
-
-    case Forward:
-        y += centimeters;
-        break;
-    case Backward:
-        y -= centimeters;
-        break;
-    case Left:
-        x -= centimeters;
-        break;
-    case Right:
-        x += centimeters;
-        break;
-    default:
-        break;
+        ///if the robot detects white tape
+        else if((sensor->cliffFrontRightSignal > 2700) || (sensor->cliffFrontLeftSignal > 2700)){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that the white tape was found
+            sprintf(str,"6,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
+            break;
+        }
+        ///if the left side of the robot detects a cliff
+        else if(sensor->cliffLeft){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that a cliff was found to the left of the robot
+            sprintf(str,"5,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
+            break;
+        }
+        ///if the left side of the robot detects white tape
+        else if(sensor->cliffLeftSignal > 2700){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that white tape was found to the left of the robot
+            sprintf(str,"8,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
+            break;
+        }
+        ///if the right side of the robot detects a cliff
+        else if(sensor->cliffRight){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that a cliff was found to the right of the robot
+            sprintf(str,"4,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            //break the while loop early
+            break;
+        }
+        ///if the right side of the robot detects white tape
+        else if(sensor->cliffRightSignal > 2700){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that white tape was found to the right of the robot
+            sprintf(str,"7,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
+            break;
+        }
     }
-
-
+    ///if the hit object boolean was never set to true
+    if(hitObject==0){
+    	///inform the GUI that the movement finished successfully
+        sprintf(str, "-1,%d,e", sum);
+        uart_sendStr(str);
+    }
+    ///stop the robot
+     oi_setWheels(0,0);
 }
 
+/**
+ * turn the robot by a specified amount
+ * @param sensor 	connection to OI motors and sensors
+ * @param degrees	amount of degrees to turn
+ * @author
+ * @date 12/05/2018
+ */
 void turn(oi_t *sensor, int degrees){
-    oi_update(sensor); //set angle to zero
-
-    //turns clockwise if angle is less than zero
+	///set angle to zero
+    oi_update(sensor);
+    ///turns clockwise if angle is less than zero
     if(degrees<0){
-
-        //right wheel goes back and left wheel goes forward
-        oi_setWheels(-rightWheelSpeed,leftWheelSpeed); // turning clockwise
+        ///right wheel moves backward and left wheel moves forward
+        oi_setWheels(-rightWheelSpeed,leftWheelSpeed);
+        ///reset the angle turned
         int sum = 0;
-        //while sum is a higher value than the degree given
+        ///while sum is a higher value than the degree given
         while(sum>degrees){
-
+        	///update the sensor
             oi_update(sensor);
+            ///update the degrees turned
             sum += sensor->angle;
-
         }
     }
-    // turns counterclockwise if  degree is positive
+    ///turns counterclockwise if  degree is positive
     else{
-        //right wheel moves forward and left wheel moves backward make it rotate couter clockwise
-        oi_setWheels(rightWheelSpeed,-leftWheelSpeed); // turning counterclockwise
+        ///right wheel moves forward and left wheel moves backward
+        oi_setWheels(rightWheelSpeed,-leftWheelSpeed);
+        ///reset the angle turned
         int sum = 0;
         // keeps updating time until the sum is greater than the degree given
         while(sum<degrees){
-
+        	///update the sensor
             oi_update(sensor);
+            ///update the degrees turned
             sum += sensor->angle;
-
         }
     }
-
-    oi_setWheels(0,0);//stops the cybot
-
-
-
+    ///stop the robot from turning
+    oi_setWheels(0,0);
+    ///switch the current direction
     switch(dir){
 
     case Forward:
@@ -289,13 +367,12 @@ void turn(oi_t *sensor, int degrees){
         break;
     }
 }
-
-
-//Function to have the Cybot move backward
 void move_backward(oi_t *sensor, int centimeters){
     int sum = 0;
     oi_update(sensor);
+    //set wheels moving back
     oi_setWheels(-rightWheelSpeed,-leftWheelSpeed);
+    //move back while distance traveled is less than given centimeters 
     while(sum < centimeters*10){
 
         oi_update(sensor);
@@ -321,29 +398,6 @@ void move_backward(oi_t *sensor, int centimeters){
     default:
         break;
     }
-}
-
-void turn_left(oi_t *sensor){
-    turn(sensor, 90);
-}
-
-void turn_right(oi_t *sensor){
-    turn(sensor, -90);
-}
-
-void spin(oi_t *sensor){
-
-    int angle=0;
-
-    oi_update(sensor);
-    oi_setWheels(rightWheelSpeed, -leftWheelSpeed);
-    while(angle<360){
-
-        oi_update(sensor);
-        angle+= sensor->angle;
-
-    }
-    oi_setWheels(0,0);
 }
 
 void bumper_backward(oi_t *sensor, int millimeters){
@@ -377,269 +431,56 @@ void bumper_backward(oi_t *sensor, int millimeters){
     }
 }
 
-
-
-
-
-
-
-void sweep_servo(){
-    //char str[50];
-    //sprintf(str, "Deg\tIR Distance(cm)\tSonarDistance(cm)\n\r");
-    int i;
-    //sweep the servo across 180 degrees, 2 degrees at a time
-    for(i = 0; i < 91; i += 1){
-        //move by two degrees
-        move_servo(i*2);
-        //give the servo time to move
-        timer_waitMillis(20);
-        //read ir data
-        read_ir();
-        //save data into the next section of the array
-        sweepData[0][i] = get_dis_ir();
-        sweepData[1][i] = read_ping();
-        //sprintf(str, "%d\t%.1f\t\t%.1f\n\r", i*2, sweepData[0][i], sweepData[1][i] );
-        //uart_sendStr(str);
-    }
-}
-
-
-
-void read_turret(){
-    //record data
-        clearObjects();
-        sweep_servo();
-    //variables for iterating through data to find blocks and info about blocks
-        objectCount = 0;
-        int i;
-        int looking = 0;
-        int currentWidth = 0;
-        float minDist = 100;
-
-        for(i = 0; i < 6; i++){
-            //if the center is -1 then the object is NULL
-            finds[i].center = -1;
-        }
-        //start iterating through data gathered
-        for(i = 0; i < 91; i++)
-        {
-            //if it finds an object, set the boolean variable indicating an object found to 1
-            if(sweepData[0][i] < 100 && sweepData[1][i] < 50 && looking == 0)
-            {
-                looking = 1;
-            }
-            //if the end of an object is found
-            if(((sweepData[0][i] >= 100 || sweepData[1][i] >= 50) && looking == 1) || (looking == 1 && i == 90))
-            {
-                //set boolean variable indicating an object found to 0
-                looking = 0;
-                //record distance
-                finds[objectCount].distance = minDist;
-                //compute center of object
-                finds[objectCount].center = i*2-currentWidth;
-                //compute width of object using arc length formula
-                finds[objectCount].width = currentWidth * (6.28 / 180) * minDist;
-                //iterate to the next block in the block array
-                objectCount++;
-                //reset helper variables
-                currentWidth = 0;
-                minDist = 100;
-            }
-            //if currently looking at a block
-            if(looking == 1)
-            {
-                //increase the width helper variable
-                currentWidth++;
-                //make sure the minimum distance of the object is still the minimum distance
-                if(sweepData[1][i] < minDist)
-                {
-                    minDist = sweepData[1][i];
-                }
-            }
-            //if the block array is full
-            if(objectCount == 6)
-            {
-                break;
-            }
-        }
-}
-
 /**
- * send a sound pulse that will then be read by the read_ping() function
+ * This method scans the area in front of the robot for objects
+ * and sends this information to the GUI
+ * @author Jared Rickard
+ * @date 12/05/2018
  */
-void sendPulse()
+void scan()
 {
-    //disable alternate function
-    GPIO_PORTB_AFSEL_R &= ~0b00001000;
-    //set as output
-    GPIO_PORTB_DIR_R |= 0b00001000;
-    //set pin high
-    GPIO_PORTB_DATA_R |= 0b00001000;
-    //wait 5 us
-    timer_waitMicros(5);
-    //set pin low
-    GPIO_PORTB_DATA_R &= 0b11110111;
-    //set as input
-    GPIO_PORTB_DIR_R &= 0b11110111;
-    //re-enable alternate function
-    GPIO_PORTB_AFSEL_R |= 0b00001000;
-}
-
-/**
- * read for a sound pulse sent by the sendPulse() function
- */
-float read_ping(){
-    //send a pulse out and set GPIO in
-    unsigned int startTime = 0;
-    unsigned int endTime = 0;
-    signed int delta = 0;
-    sendPulse();
-    timer_waitMicros(115);
-    TIMER3_ICR_R = 0xFFFFFFFF;
-    //wait for an event from the timer
-    while ((TIMER3_RIS_R & TIMER_RIS_CBERIS) == 0)
-    {}
-    //record the start time of delta
-    startTime = TIMER3_TBPS_R & 0x000000FF;
-    startTime = startTime << 16;
-    startTime += (TIMER3_TBR_R & 0x0000FFFF);
-    //clear the interrupt indicating start of delta
-    TIMER3_ICR_R |= 0x00000400;
-    //wait for an event from the timer
-    while ((TIMER3_RIS_R & TIMER_RIS_CBERIS) == 0)
-    {}
-    //record the end time of delta
-    endTime = TIMER3_TBPS_R & 0x000000FF;
-    endTime = endTime << 16;
-    endTime += (TIMER3_TBR_R & 0x0000FFFF);
-    //clear the interrupt indicating end of delta and overflow of the counter
-    TIMER3_ICR_R |= 0x00000400;
-    //change the delta calculation depending on if there is overflow
-    delta = startTime - endTime;
-    if(delta < 0)
+    ///start off with zero objects
+    objectCount = 0;
+    ///read the data and finds object width, angle, and distance from the cybot
+    read_turret(&sweepData, &finds, &objectCount);
+    ///Strings to send to the cybot
+    char str[100];
+    char temp[20];
+    sprintf(str, "9,%d", objectCount);
+    ///determine if the object is large or small
+    int LorS;
+    //iterate through all the objects found during the scan
+    int i;
+    for(i = 0; i < objectCount; i++)
     {
-        delta = startTime + (0x0000FFFF - endTime);
-    }
-    return 0.0010625 * delta;
-}
-
-//value of adc for ir sensor
-int adc = 1;
-//distance from ir sensor
-float cm = 0;
-
-/**
- * update the adc register with new value of ir sensor
- */
-void read_ir(){
-    ADC0_PSSI_R=ADC_PSSI_SS0;                   // initialize sampling
-    while((ADC0_RIS_R & ADC_RIS_INR0) == 0){    //wait for a sample to finish
+    	///if the object's width was smaller than 7 cm
+        if(finds[i].width < 7)
+        {
+        	///the object was a small object
+            LorS = 0;
         }
-    adc = ADC0_SSFIFO0_R & 0x00000FFF;          //take sample data into main function
-    ADC0_ISC_R = 0x0000001;                     //clear the interrupt
-    timer_waitMillis(50);                       //wait 0.02s
-    cm = coe * pow((float) adc, power);     //i hate powers 60188, 1.081
-}
-
-/**
- * return the raw adc value of the ir sensor
- */
-int get_ir_raw(){
-    return adc;
-}
-
-/**
- * return the distance from the ir sensor
- */
-float get_dis_ir(){
-    return cm;
-}
-
-/**
- * move the turret servo by deg (degrees)
- */
-void move_servo(float deg)
-{
-    //calculate the position
-    float posChangeFloat = 320000 - (zeroPos + (tpd * deg));
-    //cast to int so it can be written to registers
-    int posChange = (int) posChangeFloat;
-    //write to match registers
-    TIMER1_TBMATCHR_R = posChange;
-    TIMER1_TBPMR_R = posChange >> 16;
-}
-
-
-void sendSweepData(){
-    char str[50];
-    int i;
-
-    sprintf(str, "Deg\tIR Distance(cm)\tSonarDistance(cm)\n\r");
+        ///else the object's width was larger than 7 cm
+        else
+        {
+        	///the object was a large object
+            LorS = 1;
+        }
+        ///add the relevant to the string being sent to the GUI
+        sprintf(temp, ",%d,%d,%d", LorS, (int) finds[i].x, (int) finds[i].y);
+        strcat(str, temp);
+    }
+    ///add the final delimiter
+    strcat(str, ",e");
+    ///send object data to the GUI
     uart_sendStr(str);
-
-    for(i = 0; i < 91; i += 1){
-        move_servo(i*2);
-        timer_waitMillis(20);
-        read_ir();
-        sweepData[0][i] = get_dis_ir();
-        sweepData[1][i] = read_ping();
-        sprintf(str, "%d\t%.1f\t\t%.1f\n\r", i*2, sweepData[0][i], sweepData[1][i] );
-        uart_sendStr(str);
-    }
+    ///reset the position of the sensor turret
+    move_servo(0);
 }
 
-
-int checkClearPath(float yMax){
-    float X = 0;
-    float Y = 0;
-    int i;
-    for(i = 0; i < objectCount; i++){
-        X = finds[i].distance * cos(finds[i].center);
-        Y = finds[i].distance * sin(finds[i].center);
-        //for debugging
-        lcd_printf("%.2f, %.2f", X, Y);
-        timer_waitMillis(1000);
-        if(finds[i].center > 0){
-            if(abs(X) < 15){
-                if(Y < yMax && Y > 0){
-
-                    return 1;
-                }
-            }
-        }
-    }
-    return 0;
+//Load in a song 
+void loadMary(){
+    unsigned char notes[] = {64, 62, 60, 62, 64, 64, 64};
+    unsigned char duration[] = {32, 32, 32, 32, 32, 32, 32};
+    oi_loadSong(1, 7, notes, duration);
 }
 
-int turretAvoid(oi_t *sensor, int cm){
-    int result= 0;
-    int notClear;
-    read_turret();
-    notClear = checkClearPath(cm + 5);
-    while(notClear){
-        result = 1;
-        s = objectCenter;
-        turn_right(sensor);
-        read_turret();
-        notClear = checkClearPath(cm + 5);
-        lcd_printf("not clear");
-
-    }
-    lcd_printf("clear");
-    move_forward(sensor, cm);
-    if(s == objectCenter){
-        turn_left(sensor);
-    }
-    s = forward;
-    return result;
-}
-
-void clearObjects(){
-    int i;
-    for(i = 0; i < 6; i++){
-        finds[i].distance = 100;
-        finds[i].center = 45;
-        finds[i].width = 100;
-
-    }
-}
