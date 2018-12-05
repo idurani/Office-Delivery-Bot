@@ -3,20 +3,33 @@ import java.util.ArrayList;
 import processing.net.*; 
 
 /**
-* A timer for different actions
-*/
-
+* client used to connect to the cyBot
+*/ 
 Client myClient;
+
 /**
 * incoming serial data
 */
 int serialData[];
 
+/**
+* incoming string before the data is parsed
+*/
 String string = "no data";
 
+/**
+* list of the blocks the cyBot found
+*/
 ArrayList<block> blockList;
 
+/**
+* the last key pressed by the cybot
+*/
 char currentKey = 0;
+
+/**
+* ran once upon initialization of GUI
+*/
 void setup(){
 
   size(1800, 1000);
@@ -30,6 +43,7 @@ void setup(){
 }
 
 /**
+* Ran after every frame
 * Controls: 
 * w move forward 30 cm
 * a turn left 10 degrees
@@ -44,6 +58,8 @@ void setup(){
 * l delete scanned objects in front in order of first added
 */ 
 void draw(){
+  
+  //draw the cybot and gridlines
   background(#044f6f);
   line((width/2) - (30*6), (height/2) - (30*6), (width/2) + (30*6), (height/2) + (30*6));
   line((width/2) + (30*6), (height/2) - (30*6), (width/2) - (30*6), (height/2) + (30*6));
@@ -55,14 +71,18 @@ void draw(){
   rect(width/2, height/2, 100*6, 100*6);
   fill(100);
   arc(width/2, height/2, 17*6, 17*6, PI, TWO_PI);
+  
+  //draw all the blocks
   drawBlocks();
   
   //send data to the bot when a key is pressed
-  
   if(keyPressed){
-    
     currentKey = key;
+    
+    //send byte as char
     myClient.write(key);
+    
+    //update blocks accordingly
     if(key == 'a'){
       rotateBlocksRight(10);
     }
@@ -120,6 +140,7 @@ void draw(){
     }
   }
   
+  //let the user know when the bot begins and ends scanning
   if(currentKey == 'f'){
     fill(255);
     text("SCANNING", 5, (height -20));
@@ -128,6 +149,7 @@ void draw(){
 }
 
 /**
+* parses the data to be used accordingly
 * dataType: 
 * nothing hit -1
 * bumpLeft 1
@@ -177,7 +199,7 @@ void drawBlocks(){
 }
 
 /**
-* for manually removing blocks
+* deletes all blocks
 */
 void removeBlock(){
   if(blockList.size() > 0){
@@ -199,6 +221,7 @@ void blockOutOfScreen(){
 }
 
 /**
+* creates new blocks accordingly
 * dataType: 
 * nothing hit -1
 * bumpLeft 1
@@ -256,23 +279,37 @@ void creatBlocks(){
   }
 }
 
+/**
+* rotates all the blocks right
+*/
 void rotateBlocksRight(int deg){
   for(int i = 0; i < blockList.size(); i++){
     blockList.get(i).rotateRight(deg);
   }
 }
 
+/**
+* rotates all the blocks left
+*/
 void rotateBlocksLeft(int deg){
   for(int i = 0; i < blockList.size(); i++){
     blockList.get(i).rotateLeft(deg);
   }
 }
+
+/**
+* moves all the blocks
+*/
 void moveBlocks(int d){
   for(int i = 0; i < blockList.size(); i++){
     blockList.get(i).move(d);
   }
 }
 
+
+/**
+* deletes scanned objects in front of the cybot, allowing for another scan
+*/
 void deleteFrontBlocks(){
   for(int i = 0; i < blockList.size(); i++){
     if(blockList.get(i).getType() == 9 || blockList.get(i).getType() == 10){
@@ -286,6 +323,11 @@ void deleteFrontBlocks(){
   }
 }
 
+
+/**
+* used to delete the oldest block 
+* same as removeBlock(), to be updated later
+*/
 void deleteAllBlocks(){
   if(blockList.size() > 0){
     blockList.remove(0);
