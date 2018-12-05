@@ -1,32 +1,32 @@
+/**
+ * @file move.h
+ * @brief this header file will contain the movement functions
+ * @author
+ * @date 12/05/2018
+ */
+
+#ifndef MOVE_H_
+#define MOVE_H_
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <inc/tm4c123gh6pm.h>
-#include <math.h>
 #include <open_interface.h>
+#include <lcd.h>
+#include <uart.h>
 
-typedef enum{
-    Forward,
-    Backward,
-    Left,
-    Right
-} direction;
+///Function to make the cybot move a given centimeters
+void move_forward(oi_t *sensor, int centimeters);
 
-typedef enum{
-    leftEdge,
-    rightEdge,
-    frontEdge,
-    leftBump,
-    rightBump,
-    forward,
-    objectCenter,
-    objectRight,
-}state;
+///Fuction to make the cybot turn given degrees (degrees<0=right degrees>0=left)
+void turn(oi_t *sensor, int degrees);
 
-void move_forward(oi_t *sensor, int centimeters, int *x, int *y, state *s, direction *dir);
-void turn(oi_t *sensor, int degrees, direction *dir);
-void move_backward(oi_t *sensor, int centimeters, int *y, int *x, direction *dir);
-void turn_left(oi_t *sensor, direction *dir);
-void turn_right(oi_t *sensor, direction *dir);
-void spin(oi_t *sensor);
-void bumper_backward(oi_t *sensor, int millimeters, int *x, int *y, direction *dir);
+///Function to make the cybot move back a given amount of centimeters
+void move_backward(oi_t *sensor, int centimeters);
+
+///Function used when the move cybot backward when it bumps, edge, or cliff
+///in millimeter to be more accurate when moving back
+void bumper_backward(oi_t *sensor, int millimeters);
+
+#endif /* MOVE_H_ */

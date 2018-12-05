@@ -1,194 +1,237 @@
+/**
+ * @file move.c
+ * @brief this file will contain all the movement functions
+ * @author
+ * @date 12/05/2018
+ */
+
 #include <move.h>
 
-int leftWheelSpeed = 250;
-int rightWheelSpeed = 250;
+///calibrated left wheel speed
+int leftWheelSpeed = 150;
+///calibrated right wheel speed
+int rightWheelSpeed = 150;
+///string to be sent over UART to the GUI
+char str[50];
 
-// function to have the cybot move forward
-void move_forward(oi_t *sensor, int centimeters, int *x, int *y, state *s, direction *dir){
+/**
+ * move the robot forward by a specified distance
+ * @param sensor 		connection to the OI sensors and motors
+ * @param centimeters 	distance to move forward measured in centimeters
+ * @author
+ * @date 12/05/2018
+ */
+void move_forward(oi_t *sensor, int centimeters){
+	///the distance traversed so far
     int sum = 0;
-     oi_update(sensor);
-    //set wheels to move forward
+    ///update the OI data
+    oi_update(sensor);
+    ///set wheels to move forward
     oi_setWheels(rightWheelSpeed,leftWheelSpeed);
-     //while loop while it reaches past given centimeters
+    ///boolean to determine if an object was hit or not
+    int hitObject = 0;
+    ///while loop while it reaches past given centimeters
     while(sum < centimeters*10){
-         oi_update(sensor);
+    	///update the OI data
+        oi_update(sensor);
+        ///update the distance traversed
         sum += sensor->distance;
-         if (sensor->bumpLeft) { // Responsive if the left bumper is being pressed
-            bumper_backward(sensor, sum, *x, *y, *dir);
-            *s = leftBump;
-            break;
-         }
-        else if(sensor->bumpRight){ // Responsive if the right bumper is being pressed
-            bumper_backward(sensor, sum, *x, *y, *dir);
-            *s = rightBump;
-            break;
-        }
-        else if(sensor->cliffFrontRight || sensor->cliffFrontLeft || (sensor->cliffFrontRightSignal > 2700) || (sensor->cliffFrontLeftSignal > 2700)){
-            bumper_backward(sensor, sum, *x, *y, *dir);
-            *s = frontEdge;
+        ///if the left bumper is pressed
+        if (sensor->bumpLeft) {
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that an object was found in front of the left bump sensor
+            sprintf(str,"1,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
             break;
         }
-        else if(sensor->cliffLeft || (sensor->cliffLeftSignal > 2700)){
-            bumper_backward(sensor, sum, *x, *y, *dir);
-            *s = leftEdge;
+        ///if the right bumper is pressed
+        else if(sensor->bumpRight){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that an object was found in front of the right bump sensor
+            sprintf(str,"2,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
             break;
         }
-        else if(sensor->cliffRight || (sensor->cliffRightSignal > 2700)){
-            bumper_backward(sensor, sum, *x, *y, *dir);
-            *s = rightEdge;
+        ///if the robot detects a cliff
+        else if(sensor->cliffFrontRight || sensor->cliffFrontLeft){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that a cliff was found in front of the robot
+            sprintf(str,"3,%d,e", sum);
+            uart_sendStr(str);
+            //set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
             break;
         }
-  }
-     // stop Cybot
-    oi_setWheels(0,0);
-     switch(*dir){
-     case Forward:
-        *y += centimeters;
-        break;
-    case Backward:
-        *y -= centimeters;
-        break;
-    case Left:
-        *x -= centimeters;
-        break;
-    case Right:
-        *x += centimeters;
-        break;
-    default:
-        break;
+        ///if the robot detects white tape
+        else if((sensor->cliffFrontRightSignal > 2700) || (sensor->cliffFrontLeftSignal > 2700)){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that the white tape was found
+            sprintf(str,"6,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
+            break;
+        }
+        ///if the left side of the robot detects a cliff
+        else if(sensor->cliffLeft){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that a cliff was found to the left of the robot
+            sprintf(str,"5,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
+            break;
+        }
+        ///if the left side of the robot detects white tape
+        else if(sensor->cliffLeftSignal > 2700){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that white tape was found to the left of the robot
+            sprintf(str,"8,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
+            break;
+        }
+        ///if the right side of the robot detects a cliff
+        else if(sensor->cliffRight){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that a cliff was found to the right of the robot
+            sprintf(str,"4,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            //break the while loop early
+            break;
+        }
+        ///if the right side of the robot detects white tape
+        else if(sensor->cliffRightSignal > 2700){
+        	///back up the robot
+            bumper_backward(sensor, sum);
+            ///inform the GUI that white tape was found to the right of the robot
+            sprintf(str,"7,%d,e", sum);
+            uart_sendStr(str);
+            ///set the hit object boolean to true
+            hitObject=1;
+            ///break the while loop early
+            break;
+        }
     }
- }
+    ///if the hit object boolean was never set to true
+    if(hitObject==0){
+    	///inform the GUI that the movement finished successfully
+        sprintf(str, "-1,%d,e", sum);
+        uart_sendStr(str);
+    }
+    ///stop the robot
+     oi_setWheels(0,0);
+}
 
-void turn(oi_t *sensor, int degrees, direction *dir){
-    oi_update(sensor); //set angle to zero
-     //turns clockwise if angle is less than zero
+/**
+ * turn the robot by a specified amount
+ * @param sensor 	connection to OI motors and sensors
+ * @param degrees	amount of degrees to turn
+ * @author
+ * @date 12/05/2018
+ */
+void turn(oi_t *sensor, int degrees){
+	///set angle to zero
+    oi_update(sensor);
+    ///turns clockwise if angle is less than zero
     if(degrees<0){
-         //right wheel goes back and left wheel goes forward
-        oi_setWheels(-rightWheelSpeed,leftWheelSpeed); // turning clockwise
+        ///right wheel moves backward and left wheel moves forward
+        oi_setWheels(-rightWheelSpeed,leftWheelSpeed);
+        ///reset the angle turned
         int sum = 0;
-        //while sum is a higher value than the degree given
+        ///while sum is a higher value than the degree given
         while(sum>degrees){
-             oi_update(sensor);
+        	///update the sensor
+            oi_update(sensor);
+            ///update the degrees turned
             sum += sensor->angle;
-         }
+        }
     }
-    // turns counterclockwise if  degree is positive
+    ///turns counterclockwise if  degree is positive
     else{
-        //right wheel moves forward and left wheel moves backward make it rotate couter clockwise
-        oi_setWheels(rightWheelSpeed,-leftWheelSpeed); // turning counterclockwise
+        ///right wheel moves forward and left wheel moves backward
+        oi_setWheels(rightWheelSpeed,-leftWheelSpeed);
+        ///reset the angle turned
         int sum = 0;
         // keeps updating time until the sum is greater than the degree given
         while(sum<degrees){
-             oi_update(sensor);
+        	///update the sensor
+            oi_update(sensor);
+            ///update the degrees turned
             sum += sensor->angle;
-         }
+        }
     }
-     oi_setWheels(0,0);//stops the cybot
-     switch(*dir){
-     case Forward:
-        if(degrees==90){
-            *dir=Left;
-        }
-        else if(degrees == -90){
-            *dir = Right;
-        }
-        break;
-    case Backward:
-        if(degrees==90){
-            *dir=Right;
-        }
-        else if(degrees == -90){
-            *dir = Left;
-        }
-        break;
-    case Left:
-        if(degrees==90){
-            *dir=Backward;
-        }
-        else if(degrees == -90){
-            *dir = Forward;
-        }
-        break;
-    case Right:
-        if(degrees==90){
-            *dir=Forward;
-        }
-        else if(degrees == -90){
-            *dir = Backward;
-        }
-        break;
-    default:
-        break;
-    }
+    ///stop the robot from turning
+    oi_setWheels(0,0);
 }
 
-//Function to have the Cybot move backward
-void move_backward(oi_t *sensor, int centimeters, int *y, int *x, direction *dir){
+/**
+ * This method moves the robot back a specified distance
+ * @param sensor		connection to OI sensors and motors
+ * @param centimeters 	distance to travel in centimeters
+ * @author
+ * @date 12/05/2018
+ */
+void move_backward(oi_t *sensor, int centimeters){
+	///distance traveled
     int sum = 0;
+    ///update the sensors
     oi_update(sensor);
+    ///set wheels moving back
     oi_setWheels(-rightWheelSpeed,-leftWheelSpeed);
+    ///move back while distance traveled is less than given centimeters
     while(sum < centimeters*10){
-         oi_update(sensor);
+    	///update sensors
+        oi_update(sensor);
+        ///update the distance traversed
         sum += abs( sensor->distance);
-     }
-    oi_setWheels(0,0);
-     switch(*dir){
-     case Forward:
-        *y -= centimeters;
-        break;
-    case Backward:
-        *y += centimeters;
-        break;
-    case Left:
-        *x += centimeters;
-        break;
-    case Right:
-        *x -= centimeters;
-        break;
-    default:
-        break;
     }
-}
-void turn_left(oi_t *sensor, direction *dir){
-    turn(sensor, 90, *dir);
-}
-void turn_right(oi_t *sensor, direction *dir){
-    turn(sensor, -90, *dir);
-}
-void spin(oi_t *sensor){
-     int angle=0;
-     oi_update(sensor);
-    oi_setWheels(rightWheelSpeed, -leftWheelSpeed);
-    while(angle<360){
-         oi_update(sensor);
-        angle+= sensor->angle;
-     }
+    ///stop the robot
     oi_setWheels(0,0);
 }
 
-void bumper_backward(oi_t *sensor, int millimeters, int *x, int *y, direction *dir){
-     int sum = 0;
-     oi_update(sensor);
-     oi_setWheels(-rightWheelSpeed,-leftWheelSpeed);
-     while(sum < millimeters){
-          oi_update(sensor);
-         sum += abs( sensor->distance);
-      }
-     oi_setWheels(0,0);
-      switch(*dir){
-      case Forward:
-         *y -= sum;
-         break;
-     case Backward:
-         *y += sum;
-         break;
-     case Left:
-         *x += sum;
-         break;
-     case Right:
-         *x -= sum;
-         break;
-     default:
-         break;
-     }
- }
+/**
+ * This method moves the robot back a specified distance
+ * @param sensor connection to the OI sensors and motors
+ * @param millimeters distance to travel in millimeters
+ * @author
+ * @date 12/05/2018
+ */
+void bumper_backward(oi_t *sensor, int millimeters){
+	///distance traveled
+    int sum = 0;
+    ///update the sensors
+    oi_update(sensor);
+    ///set the wheels moving back
+    oi_setWheels(-rightWheelSpeed,-leftWheelSpeed);
+    ///move back while distance traveled is less than given millimeters
+    while(sum < millimeters){
+    	//update the sensors
+        oi_update(sensor);
+        ///update the distance traversed
+        sum += abs( sensor->distance);
+    }
+    ///stop the robot
+    oi_setWheels(0,0);
+}
+
