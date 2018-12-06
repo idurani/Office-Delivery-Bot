@@ -1,7 +1,7 @@
 /**
  * @file move.c
  * @brief this file will contain all the movement functions
- * @author
+ * @author Ismael Duran
  * @date 12/05/2018
  */
 
