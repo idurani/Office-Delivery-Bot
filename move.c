@@ -1,7 +1,7 @@
 /**
  * @file move.c
  * @brief this file will contain all the movement functions
- * @author Ismael Duran
+ * @author Ismael Duran & Giovanni Mejia 
  * @date 12/05/2018
  */
 
@@ -18,7 +18,7 @@ char str[50];
  * move the robot forward by a specified distance
  * @param sensor 		connection to the OI sensors and motors
  * @param centimeters 	distance to move forward measured in centimeters
- * @author
+ * @author Ismael Duran & Giovanni Mejia 
  * @date 12/05/2018
  */
 void move_forward(oi_t *sensor, int centimeters){
@@ -147,7 +147,7 @@ void move_forward(oi_t *sensor, int centimeters){
  * turn the robot by a specified amount
  * @param sensor 	connection to OI motors and sensors
  * @param degrees	amount of degrees to turn
- * @author
+ * @author Ismael Duran & Giovanni Mejia
  * @date 12/05/2018
  */
 void turn(oi_t *sensor, int degrees){
@@ -189,7 +189,7 @@ void turn(oi_t *sensor, int degrees){
  * This method moves the robot back a specified distance
  * @param sensor		connection to OI sensors and motors
  * @param centimeters 	distance to travel in centimeters
- * @author
+ * @author Ismael Duran & Giovanni Mejia 
  * @date 12/05/2018
  */
 void move_backward(oi_t *sensor, int centimeters){
@@ -214,7 +214,7 @@ void move_backward(oi_t *sensor, int centimeters){
  * This method moves the robot back a specified distance
  * @param sensor connection to the OI sensors and motors
  * @param millimeters distance to travel in millimeters
- * @author
+ * @author Ismael Duran
  * @date 12/05/2018
  */
 void bumper_backward(oi_t *sensor, int millimeters){
