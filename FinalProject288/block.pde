@@ -1,6 +1,7 @@
 
 /**
 * object representing an obstacle found by the cyBot
+* @author Taylor Burton
 */
 class block{
   
