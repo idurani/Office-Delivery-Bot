@@ -1,7 +1,7 @@
 /**
  * sensors.h
  * @brief This header file will contain the functions pertaining to the sensors
- * @author Jared Rickard
+ * @author Jared Rickard, Taylor Burton
  * @date 12/05/2018
  */
 
