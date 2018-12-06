@@ -1,7 +1,7 @@
 /*
  * inits_tiva.h
  * @brief This header file will contain the initialization functions
- * @author Jared Rickard
+ * @author Jared Rickard, Taylor Burton
  * @date 12/05/2018
  */
 
