@@ -1,3 +1,10 @@
+/**
+* Main code for the GUI
+* @author Taylor Burton
+*/
+
+
+
 import processing.serial.*;
 import java.util.ArrayList;
 import processing.net.*; 
