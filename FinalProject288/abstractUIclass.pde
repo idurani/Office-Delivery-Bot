@@ -1,7 +1,8 @@
 /**
 * UI objects for use
 * primarily with 
-* Arduinos
+* Arduinos and other microcontrolers 
+* @author Taylor Burton
 */
 
 abstract class UIobject{
